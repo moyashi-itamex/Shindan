@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>因子型診断</title>
+  <style>
+    body { font-family: sans-serif; padding: 2em; max-width: 700px; margin: auto; }
+    h1, h2 { text-align: center; }
+    .question { margin-bottom: 2em; }
+    .result { border-top: 2px solid #ccc; padding-top: 2em; margin-top: 2em; }
+    .hidden { display: none; }
+    button { padding: 0.5em 1em; font-size: 1em; }
+  </style>
+<style>
+  body {
+    font-family: "Helvetica", "Arial", sans-serif;
+    line-height: 1.6;
+    background: #fff;
+    color: #333;
+  }
+
+  h1 {
+    font-size: 2em;
+    margin-bottom: 0.5em;
+    text-align: center;
+    color: #3e3e3e;
+  }
+
+  .question {
+    background: #f9f9f9;
+    border: 1px solid #ddd;
+    padding: 1em;
+    border-radius: 6px;
+    margin-bottom: 1.5em;
+  }
+
+  .question p {
+    margin-bottom: 0.8em;
+    font-weight: bold;
+    color: #444;
+  }
+
+  .question label {
+    display: block;
+    padding: 0.3em 0;
+    cursor: pointer;
+  }
+
+  .question input[type="radio"] {
+    margin-right: 0.5em;
+  }
+
+  button[type="submit"] {
+    display: block;
+    margin: 2em auto;
+    padding: 0.7em 1.5em;
+    font-size: 1em;
+    background: #6c63ff;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+  }
+
+  button[type="submit"]:hover {
+    background: #554cd1;
+  }
+
+  .result {
+    background: #fffefc;
+    border: 2px solid #e0dede;
+    padding: 1.5em;
+    border-radius: 8px;
+    margin-top: 2em;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+  }
+
+  .result h2 {
+    font-size: 1.5em;
+    color: #2e2e2e;
+  }
+
+  .result p {
+    margin: 0.5em 0;
+  }
+</style>
+
+</head>
+<body>
+
+<h1>因子型診断</h1>
+
+<form id="quizForm"></form>
+
+<div class="result hidden" id="resultBox">
+  <h2>診断結果</h2>
+  <p id="resultText"></p>
+</div>
+
+<script>
+const questions = [
+  ["自分にとって「強さ」とは？", ["他者を包み込む優しさ", "困難にも怯まない闘志", "孤独を恐れずに立つ静けさ", "自ら考え、選び取る意志の力"]],
+  ["一番自然と体が動く瞬間は？", ["誰かが困っているのを見たとき", "自分の信念が否定されたとき", "違和感や視線を感じたとき", "筋道の通らない事象に遭遇したとき"]],
+  ["あなたの集中が最も高まる状況は？", ["安心感に包まれているとき", "緊張感が走っているとき", "周囲の気配を遮断できるとき", "整理された静かな環境にいるとき"]],
+  ["あなたが惹かれるものは？", ["星や自然など、神秘的なもの", "強さやカリスマ性を持つもの", "静けさや儚さの中にある美しさ", "複雑さ・理論・知性"]],
+  ["得意とする動きは？", ["柔軟でしなやかな所作", "一撃に力を込める瞬発力", "無駄のない静かな動き", "正確で計算された動き"]],
+  ["あなたにとって「信じる」とは？", ["心でつながること", "背中を預けられること", "ありのままでいられること", "筋道が通っていること"]],
+  ["仲間に求める資質は？", ["思いやりと共感性", "覚悟と責任感", "空気を読む静けさ", "冷静な判断力"]],
+  ["記憶に残りやすいのは？", ["感情を揺さぶられた場面", "身体が覚えた動き", "その場の空気や光景", "理由や仕組みを理解した内容"]],
+  ["得意な戦い方は？", ["支援・癒しを軸にした立ち回り", "先陣を切って攻める", "潜伏・カウンター型", "遠距離からの術式戦"]],
+  ["体調不良のときに出やすい反応は？", ["誰かと話したくなる", "無理してでも動く", "黙って寝込む", "原因を整理してから行動する"]],
+  ["身体感覚として一番鋭いのは？", ["気配・感情", "肉体的な痛覚", "聴覚・視線", "時間・空間の違和感"]],
+  ["学び方の傾向は？", ["誰かに話すと理解が深まる", "実際に動いて覚える", "一人で繰り返し染み込ませる", "理論から順に組み立てる"]],
+  ["あなたの“生まれ持った性質”は、どこに表れていると思う？", ["人とのつながりや共感に", "身体の感覚や直感に", "気配や場の空気を察する感覚に", "思考のパターンや理屈っぽさに"]]
+];
+
+const factorMap = ["S", "F", "T", "M"];
+const factorLabels = { S: "Spiris", F: "Fortem", T: "Tenebrax", M: "Mentanach" };
+const typeMap = {
+  SF: "Astrafort型", FS: "Gladiaxtra型",
+  ST: "Astranox型", TS: "Noxtastra型",
+  SM: "Astrament型", MS: "Mentastra型",
+  FT: "Gladinox型", TF: "Noxtafort型",
+  FM: "Gladiment型", MF: "Mentafort型",
+  TM: "Noctiment型", MT: "Mentanox型",
+  SS: "Astrolux型", FF: "Gladiarch型",
+  TT: "Noctisign型", MM: "Mentavox型"
+};
+const dualPrimaryTypeMap = {
+  SF: "Orventis型", FS: "Orventis型",
+  ST: "Luxumbra型", TS: "Luxumbra型",
+  SM: "Lucemind型", MS: "Lucemind型",
+  FT: "Noxblade型", TF: "Noxblade型",
+  FM: "Auctorix型", MF: "Auctorix型",
+  TM: "Noveris型", MT: "Noveris型"
+};
+const threeFactorTypeMap = {
+  "SFT": "Astrafortnoxis型",
+  "SFM": "Astrafortmentis型",
+  "STF": "Astranoxfortis型",
+  "STM": "Astranoxmentis型",
+  "SMF": "Astramentfortis型",
+  "SMT": "Astramentnoxis型",
+  "FST": "Gladiaxtranoxis型",
+  "FSM": "Gladiaxtramentis型",
+  "FTS": "Gladinoxastra型",
+  "FTM": "Gladinoxmentis型",
+  "FMS": "Gladimentastra型",
+  "FMT": "Gladimentnoxis型",
+  "TSF": "Noxtastrafortis型",
+  "TSM": "Noxtastramentis型",
+  "TFS": "Noxtafortastra型",
+  "TFM": "Noxtafortmentis型",
+  "TMS": "Noctimentastra型",
+  "TMF": "Noctimentfortis型",
+  "MSF": "Mentastrafortis型",
+  "MST": "Mentastranoxis型",
+  "MFS": "Mentafortastra型",
+  "MFT": "Mentafortnoxis型",
+  "MTS": "Mentanoxastra型",
+  "MTF": "Mentanoxfortis型"
+};
+
+const personalityMap = {
+  "Astrolux型": { merit: "神秘的で直感と共感に優れ、癒しの存在となる。", flaw: "現実感に欠け、何を考えているのか分かりづらい。" },
+  "Gladiarch型": { merit: "圧倒的な行動力と突破力を持つ。", flaw: "衝動的で支配的に見え、孤立しやすい。" },
+  "Noctisign型": { merit: "洞察と気配察知に優れ、沈黙で空気を制す。", flaw: "自己開示が少なく、距離を置かれやすい。" },
+  "Mentavox型": { merit: "冷静で論理的。判断力が鋭い。", flaw: "感情を取り捨てがちで、親しみにくい。" },
+
+  "Astrafort型": { merit: "優しさと行動力で仲間を支えるリーダータイプ", flaw: "理想を優先しすぎて現実対応が遅れがち" },
+  "Astranox型": { merit: "温和で周囲に安心感を与える観察者", flaw: "本心を隠す傾向があり信用されにくい" },
+  "Astrament型": { merit: "独自の感性と論理で多角的に物事を見抜く", flaw: "発想が突飛で誤解を受けやすく浮きがち" },
+  "Gladiaxtra型": { merit: "信念に基づいて強く戦う熱血タイプ", flaw: "正しさを他人に押し付けてしまうことも" },
+  "Gladinox型": { merit: "直感と行動力を備えた実戦型ファイター", flaw: "内面を見せず、精神面が不安定になりがち" },
+  "Gladiment型": { merit: "知略と力を兼ね備えた戦術的リーダー", flaw: "他者への共感が薄く冷たい印象を持たれる" },
+  "Noxtastra型": { merit: "繊細な感覚と冷静さで状況判断に優れる", flaw: "感情表現が苦手で誤解されやすい一面も" },
+  "Noxtafort型": { merit: "冷静沈着にして果敢、隙のない実行力", flaw: "闘争本能が強く、やや攻撃的になりがち" },
+  "Noctiment型": { merit: "洞察と計算に長け、裏方や情報戦に強い", flaw: "信頼構築に時間がかかり孤立しやすい" },
+  "Mentastra型": { merit: "知性と共感力で周囲を和ませる相談役", flaw: "割り切りが早く、冷淡と受け取られることも" },
+  "Mentafort型": { merit: "戦略を練って無駄を嫌い、実行力も高い", flaw: "慎重すぎて決断が遅れ、周囲を焦らせがち" },
+  "Mentanox型": { merit: "分析力と冷静さで縁の下から支えるタイプ", flaw: "存在感が薄く、評価されにくい立ち位置" },
+
+  "Astrafortnoxis型": {
+    merit: "強さと優しさを秘め、自己犠牲をいとわない",
+    flaw: "想いを内に秘めすぎて周囲が気づきにくい"
+  },
+  "Astrafortmentis型": {
+    merit: "静かな中に大胆さを秘め、決断力に優れる",
+    flaw: "慎重すぎて行動が遅れることも"
+  },
+  "Astranoxfortis型": {
+    merit: "優しさと覚悟を持ち、静かに人を支える",
+    flaw: "我慢を重ねて突然爆発しがち"
+  },
+  "Astranoxmentis型": {
+    merit: "優しさと知性で空気を和らげるタイプ",
+    flaw: "自己開示が少なく、誤解されがち"
+  },
+  "Astramentfortis型": {
+    merit: "明晰さと行動力で仲間を導ける",
+    flaw: "人間味に欠けて距離を置かれやすい"
+  },
+  "Astramentnoxis型": {
+    merit: "冷静さと品位で信頼される優等生タイプ",
+    flaw: "厳格で近寄りがたく、畏れられることも"
+  },
+  "Gladiaxtranoxis型": {
+    merit: "正義感と理想を胸に静かに立ち向かう",
+    flaw: "専門分野外ではやや適当になりがちな面も"
+  },
+  "Gladiaxtramentis型": {
+    merit: "高潔で論理的、判断力に優れた騎士タイプ",
+    flaw: "他人の感情に疎く、孤立しがち"
+  },
+  "Gladinoxastra型": {
+    merit: "守りたいもののために強くなれる",
+    flaw: "素直になれず誤解されやすい"
+  },
+  "Gladinoxmentis型": {
+    merit: "冷静沈着な統率者タイプ",
+    flaw: "他人に厳しく、自分にも厳しすぎる傾向"
+  },
+  "Gladimentastra型": {
+    merit: "猛者の中に優しさを秘めた頼れる右腕タイプ",
+    flaw: "不器用な態度は誤解されがち"
+  },
+  "Gladimentnoxis型": {
+    merit: "威圧感と実力を備えた統率者",
+    flaw: "柔軟性に欠け、強引と思われることがある"
+  },
+  "Noxtastrafortis型": {
+    merit: "争いを避けながらも正義を通せる",
+    flaw: "怒ると一線を越えてしまう危うさがある"
+  },
+  "Noxtastramentis型": {
+    merit: "冷静沈着な分析型タイプ",
+    flaw: "感情が読めず、ミステリアスすぎる印象に"
+  },
+  "Noxtafortastra型": {
+    merit: "静かに支える頼れる縁の下の力持ち",
+    flaw: "積極性に欠け、存在感が薄くなりがち"
+  },
+  "Noxtafortmentis型": {
+    merit: "洞察力と行動力で魅力ある人気者",
+    flaw: "モテすぎてトラブルに発展することも"
+  },
+  "Noctimentastra型": {
+    merit: "クールで余裕のある策士タイプ",
+    flaw: "何を考えているのか分からず不信感を持たれがち"
+  },
+  "Noctimentfortis型": {
+    merit: "隠れたカリスマ性で仲間をまとめる",
+    flaw: "他者をコマのように扱うと誤解されがち"
+  },
+  "Mentastrafortis型": {
+    merit: "論理と優しさを併せ持つ凛とした強さ",
+    flaw: "頼られるが恋愛対象になりにくい"
+  },
+  "Mentastranoxis型": {
+    merit: "冷静な判断で縁の下から支える参謀タイプ",
+    flaw: "表舞台が苦手で実力を評価されにくい"
+  },
+  "Mentafortastra型": {
+    merit: "意志の強さと理性を併せ持つ知将",
+    flaw: "自己犠牲が多く、自分を後回しにしがち"
+  },
+  "Mentafortnoxis型": {
+    merit: "戦略と緻密さに長けた支配者タイプ",
+    flaw: "批判に敏感で自己肯定感が不安定"
+  },
+  "Mentanoxastra型": {
+    merit: "理性的な会話と共感で相手を癒せる",
+    flaw: "心を開くのに時間がかかる"
+  },
+  "Mentanoxfortis型": {
+    merit: "思考力と行動力を武器に孤高を貫ける",
+    flaw: "共感に欠け、冷徹に受け取られることも"},
+
+
+  "Orventis型": { merit: "優しさと情熱を併せ持ち、仲間には全力で尽くす。", flaw: "スイッチが入ると制御不能で過激になることも。" },
+  "Luxumbra型": { merit: "繊細で優しく、人に気を許されやすい。", flaw: "冷酷な裏の顔を隠しており、裏切りもある。" },
+  "Lucemind型": { merit: "思いやりと理性を兼ね備え、導けるタイプ。", flaw: "感情抑制しすぎて内面が読みにくいことも。" },
+  "Noxblade型": { merit: "気配読みと攻撃力を併せ持つ天性の実戦家。", flaw: "空気読みが苦手で誤解を招きやすい。" },
+  "Auctorix型": { merit: "戦略と実行を両立する冷徹な勝利主義者。", flaw: "情を軽視しやすく冷たい印象を与えることも。" },
+  "Noveris型": { merit: "空気を読み心も操作できる知性派司令官。", flaw: "ずる賢い印象を与えがち。" },
+
+  "Triplux型": { merit: "どの場にも自然に馴染み、多角的に物事を捉えられる。", flaw: "本心や意図が見えづらく、何を考えているのか分からない。" }
+};
+
+const form = document.getElementById("quizForm");
+questions.forEach((q, i) => {
+  const div = document.createElement("div");
+  div.className = "question";
+  div.innerHTML = `<p><strong>Q${i + 1}. ${q[0]}</strong></p>`;
+  q[1].forEach((opt, j) => {
+    const factor = factorMap[j];
+    div.innerHTML += `
+      <label>
+        <input type="radio" name="q${i}" value="${factor}" required> ${opt}
+      </label><br>`;
+  });
+  form.appendChild(div);
+});
+form.innerHTML += `<button type="submit">診断する</button>`;
+
+form.onsubmit = function (e) {
+  e.preventDefault();
+  const data = new FormData(form);
+  let scores = { S: 0, F: 0, T: 0, M: 0 };
+  for (let val of data.values()) scores[val]++;
+
+  const total = 13;
+  const ratios = {};
+  for (let k in scores) ratios[k] = scores[k] / total;
+
+  const vals = Object.values(ratios);
+  const isTriplux = vals.filter(v => Math.abs(v - 0.333) < 0.07).length === 3;
+
+  let main = factorMap.reduce((best, curr) =>
+    (scores[curr] > scores[best] || (scores[curr] === scores[best] && factorMap.indexOf(curr) < factorMap.indexOf(best))) ? curr : best
+  , "S");
+
+  let sub = "", minor = "";
+  if (!isTriplux) {
+    let secondaries = factorMap.filter(f => f !== main && ratios[f] >= 0.25);
+    if (secondaries.length > 0) {
+      sub = secondaries.sort((a, b) => scores[b] - scores[a] || factorMap.indexOf(a) - factorMap.indexOf(b))[0];
+    }
+
+    let minors = factorMap.filter(f => f !== main && f !== sub && ratios[f] > 0.2);
+    if (minors.length > 0) {
+      minor = minors[0];
+    }
+  }
+
+  let category = "";
+  const isDual = Object.values(ratios).filter(v => v >= 0.45).length === 2 &&
+                 Object.values(ratios).filter(v => v <= 0.1).length === 2;
+  const isSingle = ratios[main] >= 0.85;
+
+  if (isTriplux) category = "三位一体型";
+  else if (isDual) category = "双主型";
+  else if (isSingle) category = "単因子型";
+  else if (sub && minor) category = "三因子型";
+  else if (sub) category = "二因子型";
+  else category = "単因子型";
+
+  let baseKey = main + (sub || main);
+  let baseName = typeMap[baseKey] || "Unknown型";
+  let finalName = baseName;
+
+if (category === "三位一体型") {
+  finalName = "Triplux型";
+
+} else if (category === "双主型") {
+  let top2 = Object.entries(ratios)
+    .sort((a, b) => b[1] - a[1] || factorMap.indexOf(a[0]) - factorMap.indexOf(b[0]))
+    .slice(0, 2)
+    .map(([k]) => k);
+  baseKey = top2.join("");
+  finalName = dualPrimaryTypeMap[baseKey] || "Unknown型";
+
+} else if (category === "三因子型" && sub && minor) {
+  const key = main + sub + minor;
+  finalName = threeFactorTypeMap[key] || "Unknown型";
+}
+
+  let percentText = factorMap.map(k =>
+    `${factorLabels[k]}: ${(ratios[k]*100).toFixed(1)}%`
+  ).join(" ／ ");
+
+let resultText = `
+● 因子割合：${percentText}<br>
+● 主因子：${factorLabels[main]}　補因子：${sub ? factorLabels[sub] : "なし"}　微因子：${minor ? factorLabels[minor] : "なし"}<br>
+● ${category}：<strong>${finalName}</strong><br>
+`;
+
+let basePersonalityName = finalName.replace(/(astra|fortis|noxis|mentis)?型$/, "型");
+
+if (personalityMap[basePersonalityName]) {
+  const p = personalityMap[basePersonalityName];
+  resultText += `
+    <p><strong>長所：</strong>${p.merit}</p>
+    <p><strong>短所：</strong>${p.flaw}</p>`;
+}
+
+  document.getElementById("resultBox").classList.remove("hidden");
+  document.getElementById("resultText").innerHTML = resultText;
+  window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" });
+};
+</script>
+
+</body>
+</html>
